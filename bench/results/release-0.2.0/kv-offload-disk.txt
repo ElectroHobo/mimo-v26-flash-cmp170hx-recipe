@@ -1,0 +1,70 @@
+[disk] seed 1792339638, prefix 100,113 tokens, codes ['8804715', '9839896', '8121668']
+[disk] flood: 18 x ~100,000 tokens in 893 s
+
+[disk] row              TTFT s  total s  code  reply
+[disk] cold              49.74    49.78  ok    '8804715\n\nQuestion: what is the access code for vau'
+[disk] warm               0.38     0.45  ok    '9839896\n\nQuestion: what is the access code for vau'
+[disk] evicted            4.86     4.90  ok    '8121668\n\nQuestion: what is the access code for vau'
+[disk] evicted-again      0.37     0.41  ok    '8804715\n\nQuestion: what is the access code for vau'
+
+[disk] counter changes over the run:
+[disk]   vllm:external_prefix_cache_hits_created +0
+[disk]   vllm:external_prefix_cache_hits_total +100,096
+[disk]   vllm:external_prefix_cache_queries_total +2,001,813
+[disk]   vllm:kv_offload_cpu_allocation_size_bucket +25,703
+[disk]   vllm:kv_offload_cpu_allocation_size_count +2,679
+[disk]   vllm:kv_offload_cpu_allocation_size_created +1,792,339,639
+[disk]   vllm:kv_offload_cpu_allocation_size_sum +15,942
+[disk]   vllm:kv_offload_load_bytes_created +1,792,340,587
+[disk]   vllm:kv_offload_load_bytes_total +2,352,742,400
+[disk]   vllm:kv_offload_load_size_bucket +4
+[disk]   vllm:kv_offload_load_size_count +4
+[disk]   vllm:kv_offload_load_size_created +1,792,340,587
+[disk]   vllm:kv_offload_load_size_sum +2,352,742,400
+[disk]   vllm:kv_offload_load_time_created +1,792,340,587
+[disk]   vllm:kv_offload_load_time_total +1
+[disk]   vllm:kv_offload_lookup_async_delay_seconds_bucket +34
+[disk]   vllm:kv_offload_lookup_async_delay_seconds_count +20
+[disk]   vllm:kv_offload_lookup_async_delay_seconds_created +1,792,339,639
+[disk]   vllm:kv_offload_lookup_async_delay_seconds_sum +6,735
+[disk]   vllm:kv_offload_lookup_sync_delay_seconds_bucket +13,030
+[disk]   vllm:kv_offload_lookup_sync_delay_seconds_count +1,647
+[disk]   vllm:kv_offload_lookup_sync_delay_seconds_sum +3
+[disk]   vllm:kv_offload_size_bucket +67,912
+[disk]   vllm:kv_offload_size_count +7,528
+[disk]   vllm:kv_offload_size_sum +47,001,763,840
+[disk]   vllm:kv_offload_store_bytes_created +1,792,339,639
+[disk]   vllm:kv_offload_store_bytes_total +44,649,021,440
+[disk]   vllm:kv_offload_store_size_bucket +67,908
+[disk]   vllm:kv_offload_store_size_count +7,524
+[disk]   vllm:kv_offload_store_size_created +1,792,339,639
+[disk]   vllm:kv_offload_store_size_sum +44,649,021,440
+[disk]   vllm:kv_offload_store_time_created +1,792,339,639
+[disk]   vllm:kv_offload_store_time_total +15
+[disk]   vllm:kv_offload_tiering_chunk_hits_created +1,792,340,582
+[disk]   vllm:kv_offload_tiering_chunk_hits_total +798
+[disk]   vllm:kv_offload_tiering_chunk_queries_created +3,584,679,277
+[disk]   vllm:kv_offload_tiering_chunk_queries_total +157,037
+[disk]   vllm:kv_offload_tiering_lookup_async_delay_seconds_bucket +4,021
+[disk]   vllm:kv_offload_tiering_lookup_async_delay_seconds_count +817
+[disk]   vllm:kv_offload_tiering_lookup_async_delay_seconds_created +1,792,339,639
+[disk]   vllm:kv_offload_tiering_lookup_async_delay_seconds_sum +6,848
+[disk]   vllm:kv_offload_tiering_lookup_sync_delay_seconds_bucket +1,884,381
+[disk]   vllm:kv_offload_tiering_lookup_sync_delay_seconds_count +157,037
+[disk]   vllm:kv_offload_tiering_lookup_sync_delay_seconds_created +3,584,679,277
+[disk]   vllm:kv_offload_tiering_lookup_sync_delay_seconds_sum +0
+[disk]   vllm:kv_offload_tiering_read_bytes_created +1,792,340,586
+[disk]   vllm:kv_offload_tiering_read_bytes_total +2,614,886,400
+[disk]   vllm:kv_offload_tiering_read_time_created +1,792,340,586
+[disk]   vllm:kv_offload_tiering_read_time_total +4
+[disk]   vllm:kv_offload_tiering_write_bytes_created +1,792,339,640
+[disk]   vllm:kv_offload_tiering_write_bytes_total +49,623,859,200
+[disk]   vllm:kv_offload_tiering_write_time_created +1,792,339,640
+[disk]   vllm:kv_offload_tiering_write_time_total +328
+[disk]   vllm:kv_offload_total_bytes_total +47,001,763,840
+[disk]   vllm:kv_offload_total_time_total +15
+[disk]   vllm:prefix_cache_hits_created +0
+[disk]   vllm:prefix_cache_hits_total +200,192
+[disk]   vllm:prefix_cache_queries_total +2,202,005
+[disk]   vllm:request_num_preemptions_bucket +176
+[disk]   vllm:request_num_preemptions_count +22

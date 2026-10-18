@@ -1,0 +1,6 @@
+[fair384] long prompt 29,847 tokens, sent 3 s in, read in 13.99 s; decoder 1500 tokens in 20.7 s
+[fair384] decoder tok/s  before  189.0   during prefill   15.1   after  194.3
+[fair384] longest pause between chunks 0.20 s, 16.4 s into the run (during the prefill)
+[fair384] long prompt 30,089 tokens, sent 3 s in, read in 14.18 s; decoder 1500 tokens in 21.0 s
+[fair384] decoder tok/s  before  197.8   during prefill   14.7   after  181.9
+[fair384] longest pause between chunks 0.20 s, 16.9 s into the run (during the prefill)

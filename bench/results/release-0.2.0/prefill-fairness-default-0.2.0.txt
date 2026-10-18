@@ -1,0 +1,3 @@
+[default-0.2.0] long prompt 29,946 tokens, sent 3 s in, read in 14.11 s; decoder 1500 tokens in 20.8 s
+[default-0.2.0] decoder tok/s  before  200.9   during prefill   16.9   after  179.7
+[default-0.2.0] longest pause between chunks 0.21 s, 16.9 s into the run (during the prefill)

@@ -1,0 +1,55 @@
+[ram64] seed 1792338235, prefix 100,109 tokens, codes ['9022258', '1350502', '7605792']
+[ram64] flood: 18 x ~100,000 tokens in 922 s
+
+[ram64] row              TTFT s  total s  code  reply
+[ram64] cold              49.74    49.75  ok    '9022258\n\nQuestion: what is the access code for vau'
+[ram64] warm               0.36     0.36  ok    '1350502'
+[ram64] evicted            0.62     0.63  ok    '7605792'
+[ram64] evicted-again      0.36     0.40  ok    '9022258\n\nQuestion: what is the access code for vau'
+[ram64] NOTE: evicted TTFT is near warm - either offload reloaded the prefix or the flood did not evict it. If the offload-off run reads near warm too, raise --flood-tokens
+
+[ram64] counter changes over the run:
+[ram64]   vllm:external_prefix_cache_hits_created +0
+[ram64]   vllm:external_prefix_cache_hits_total +100,096
+[ram64]   vllm:external_prefix_cache_queries_total +2,005,012
+[ram64]   vllm:kv_offload_cpu_allocation_size_bucket +16,987
+[ram64]   vllm:kv_offload_cpu_allocation_size_count +1,887
+[ram64]   vllm:kv_offload_cpu_allocation_size_created +1,792,338,236
+[ram64]   vllm:kv_offload_cpu_allocation_size_sum +15,166
+[ram64]   vllm:kv_offload_load_bytes_created +1,792,339,208
+[ram64]   vllm:kv_offload_load_bytes_total +2,352,742,400
+[ram64]   vllm:kv_offload_load_size_bucket +4
+[ram64]   vllm:kv_offload_load_size_count +4
+[ram64]   vllm:kv_offload_load_size_created +1,792,339,208
+[ram64]   vllm:kv_offload_load_size_sum +2,352,742,400
+[ram64]   vllm:kv_offload_load_time_created +1,792,339,208
+[ram64]   vllm:kv_offload_load_time_total +1
+[ram64]   vllm:kv_offload_lookup_sync_delay_seconds_bucket +222
+[ram64]   vllm:kv_offload_lookup_sync_delay_seconds_count +22
+[ram64]   vllm:kv_offload_lookup_sync_delay_seconds_sum +0
+[ram64]   vllm:kv_offload_size_bucket +68,132
+[ram64]   vllm:kv_offload_size_count +7,552
+[ram64]   vllm:kv_offload_size_sum +47,066,644,480
+[ram64]   vllm:kv_offload_store_bytes_created +1,792,338,236
+[ram64]   vllm:kv_offload_store_bytes_total +44,713,902,080
+[ram64]   vllm:kv_offload_store_size_bucket +68,128
+[ram64]   vllm:kv_offload_store_size_count +7,548
+[ram64]   vllm:kv_offload_store_size_created +1,792,338,236
+[ram64]   vllm:kv_offload_store_size_sum +44,713,902,080
+[ram64]   vllm:kv_offload_store_time_created +1,792,338,236
+[ram64]   vllm:kv_offload_store_time_total +15
+[ram64]   vllm:kv_offload_tiering_chunk_hits_created +1,792,339,208
+[ram64]   vllm:kv_offload_tiering_chunk_hits_total +798
+[ram64]   vllm:kv_offload_tiering_chunk_queries_created +1,792,338,236
+[ram64]   vllm:kv_offload_tiering_chunk_queries_total +817
+[ram64]   vllm:kv_offload_tiering_lookup_sync_delay_seconds_bucket +9,799
+[ram64]   vllm:kv_offload_tiering_lookup_sync_delay_seconds_count +817
+[ram64]   vllm:kv_offload_tiering_lookup_sync_delay_seconds_created +1,792,338,236
+[ram64]   vllm:kv_offload_tiering_lookup_sync_delay_seconds_sum +0
+[ram64]   vllm:kv_offload_total_bytes_total +47,066,644,480
+[ram64]   vllm:kv_offload_total_time_total +16
+[ram64]   vllm:prefix_cache_hits_created +0
+[ram64]   vllm:prefix_cache_hits_total +200,192
+[ram64]   vllm:prefix_cache_queries_total +2,205,204
+[ram64]   vllm:request_num_preemptions_bucket +176
+[ram64]   vllm:request_num_preemptions_count +22
