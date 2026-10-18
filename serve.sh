@@ -62,7 +62,9 @@ MIMO_DEFAULT_BLOCK_SIZE=128
 MIMO_DEFAULT_DFLASH_SPEC_N=7
 MIMO_DEFAULT_MTP_SPEC_N=2
 MIMO_DEFAULT_MAX_SEQS=32
-MIMO_DEFAULT_MAX_BATCHED=1024
+MIMO_DEFAULT_MAX_BATCHED=2048
+MIMO_DEFAULT_FAIR_CHUNK=384
+MIMO_DEFAULT_FAIR_PARTIAL=2
 MIMO_DEFAULT_REASONING_PARSER=mimo
 MIMO_DEFAULT_TOOL_PARSER=mimo
 MIMO_DEFAULT_PORT=8000
@@ -210,11 +212,42 @@ elif [ "$MODE" = mtp ]; then
   if [[ ! "$SPEC_N" =~ ^[1-9][0-9]*$ ]]; then echo 'SPEC_N must be positive' >&2; exit 2; fi
   SPEC_JSON="{\"method\":\"mtp\",\"num_speculative_tokens\":$SPEC_N"
 fi
+MAX_SEQS=${MAX_SEQS:-$MIMO_DEFAULT_MAX_SEQS}
+# KV offload (KV_OFFLOAD_GB, default 0: off): a tier of host RAM, in GiB, that keeps KV
+# blocks evicted from the cards and copies them back instead of re-prefilling (vLLM's
+# OffloadingConnector with TieringOffloadingSpec; a shared mmap in /dev/shm, so start.sh
+# sizes shm to fit). KV_OFFLOAD_DIR (empty: none) adds a disk tier behind the RAM one;
+# start.sh mounts the directory named in .env at /kvtier. A drafter's cache group would
+# otherwise zero every lookup (vLLM #52735), so offload also sets disable_eagle_block_drop
+# in the speculative config. docs/results.md has the numbers.
+KV_OFFLOAD_GB=${KV_OFFLOAD_GB:-0}
+KV_OFFLOAD_DIR=${KV_OFFLOAD_DIR:-}
+[[ "$KV_OFFLOAD_GB" =~ ^[0-9]+$ ]] || { echo 'KV_OFFLOAD_GB must be a whole number of GiB' >&2; exit 2; }
+if [ -n "$KV_OFFLOAD_DIR" ] && [ "$KV_OFFLOAD_GB" = 0 ]; then
+  echo 'KV_OFFLOAD_DIR needs a RAM tier in front of it: set KV_OFFLOAD_GB' >&2; exit 2
+fi
+KV_OFFLOAD=()
+if [ "$KV_OFFLOAD_GB" != 0 ]; then
+  OFFLOAD_JSON="{\"kv_connector\":\"OffloadingConnector\",\"kv_role\":\"kv_both\",\"kv_connector_extra_config\":{\"spec_name\":\"TieringOffloadingSpec\",\"cpu_bytes_to_use\":$((KV_OFFLOAD_GB * 1073741824))"
+  [ -n "$KV_OFFLOAD_DIR" ] && OFFLOAD_JSON+=",\"secondary_tiers\":[{\"type\":\"fs\",\"root_dir\":\"$KV_OFFLOAD_DIR\"}]"
+  KV_OFFLOAD=(--kv-transfer-config "$OFFLOAD_JSON}}")
+fi
 if [ "$MODE" != none ]; then
-  # SPEC_SCHEDULE (empty: off): drafts by batch size, vLLM's num_speculative_tokens_per_batch_size,
-  # a JSON list of [first_batch,last_batch,drafts] ranges without spaces starting at batch 1,
-  # e.g. [[1,2,7],[3,32,4]] (drafts above SPEC_N are clamped to it).
+  # SPEC_SCHEDULE: drafts by batch size, vLLM's num_speculative_tokens_per_batch_size, a JSON
+  # list of [first_batch,last_batch,drafts] ranges without spaces starting at batch 1, e.g.
+  # [[1,2,7],[3,32,4]] (drafts above SPEC_N are clamped to it). Empty: dflash gets the default
+  # schedule, 7 drafts for one request, 5 for two, 3 from three up to MAX_SEQS (every request
+  # puts drafts+1 tokens through the model per step, and in a mixture of experts the step
+  # cost grows with tokens in flight; docs/results.md); mtp gets none. none: SPEC_N at every
+  # batch size.
   SPEC_SCHEDULE=${SPEC_SCHEDULE:-}
+  if [ -z "$SPEC_SCHEDULE" ] && [ "$MODE" = dflash ]; then
+    SPEC_SCHEDULE="[[1,1,7]"
+    [ "$MAX_SEQS" -ge 2 ] && SPEC_SCHEDULE+=",[2,2,5]"
+    [ "$MAX_SEQS" -ge 3 ] && SPEC_SCHEDULE+=",[3,$MAX_SEQS,3]"
+    SPEC_SCHEDULE+="]"
+  fi
+  [ "$SPEC_SCHEDULE" = none ] && SPEC_SCHEDULE=
   if [ -n "$SPEC_SCHEDULE" ]; then
     SCHEDULE_RANGE='\[[1-9][0-9]*,[1-9][0-9]*,[0-9]+\]'
     if [[ ! "$SPEC_SCHEDULE" =~ ^\[$SCHEDULE_RANGE(,$SCHEDULE_RANGE)*\]$ ]]; then
@@ -230,10 +263,23 @@ if [ "$MODE" != none ]; then
     [[ "$SPEC_ADAPTIVE_K" =~ ^\{.*\}$ ]] || { echo 'SPEC_ADAPTIVE_K must be a JSON object' >&2; exit 2; }
     SPEC_JSON+=",\"adaptive_k\":$SPEC_ADAPTIVE_K"
   fi
+  [ "$KV_OFFLOAD_GB" != 0 ] && SPEC_JSON+=",\"disable_eagle_block_drop\":true"
   SPEC=(--speculative-config "$SPEC_JSON}")
 fi
 # EXPERT_PARALLEL=1 keeps whole routed experts on each card instead of slicing every
 # expert four ways (vLLM --enable-expert-parallel). Off by default: see docs/results.md.
+# FAIR_CHUNK (default 384; 0: off): while any request is decoding, prefill goes in slices of this
+# many tokens (vLLM --prefill-chunk-with-decodes) so the decoders keep getting steps; up to
+# FAIR_PARTIAL prompts may be mid-prefill at once (--max-num-partial-prefills). Measured in
+# docs/results.md: a 30K prompt landing mid-answer drops the decoder from ~195 to 10 tok/s
+# without it, 15 with 384-token slices, 36 with 128, while the prompt's own read takes
+# 20 % / 65 % longer.
+FAIR_CHUNK=${FAIR_CHUNK:-$MIMO_DEFAULT_FAIR_CHUNK}
+FAIR_PARTIAL=${FAIR_PARTIAL:-$MIMO_DEFAULT_FAIR_PARTIAL}
+[[ "$FAIR_CHUNK" =~ ^[0-9]+$ ]] || { echo 'FAIR_CHUNK must be a whole number of tokens (0: off)' >&2; exit 2; }
+[[ "$FAIR_PARTIAL" =~ ^[1-9][0-9]*$ ]] || { echo 'FAIR_PARTIAL must be a positive whole number' >&2; exit 2; }
+FAIR_ARGS=()
+[ "$FAIR_CHUNK" != 0 ] && FAIR_ARGS=(--prefill-chunk-with-decodes "$FAIR_CHUNK" --max-num-partial-prefills "$FAIR_PARTIAL")
 EXPERT_PARALLEL=${EXPERT_PARALLEL:-0}
 case "$EXPERT_PARALLEL" in 0|1) ;; *) echo 'EXPERT_PARALLEL must be 0 or 1' >&2; exit 2;; esac
 EP_ARGS=()
@@ -253,12 +299,13 @@ CMD=("$VENV/bin/vllm" serve "$MODEL"
   --hf-overrides "$MIMO_DEFAULT_HF_OVERRIDES" --trust-remote-code
   --kv-cache-dtype "$KV_DTYPE" --block-size "$MIMO_DEFAULT_BLOCK_SIZE"
   --max-model-len "$MAX_LEN" --gpu-memory-utilization "$GPU_UTIL" --kv-cache-memory "$KV_MEM"
-  --max-num-seqs "${MAX_SEQS:-$MIMO_DEFAULT_MAX_SEQS}" --max-num-batched-tokens "${MAX_BATCHED:-$MIMO_DEFAULT_MAX_BATCHED}"
+  --max-num-seqs "$MAX_SEQS" --max-num-batched-tokens "${MAX_BATCHED:-$MIMO_DEFAULT_MAX_BATCHED}"
   --reasoning-parser "${REASONING_PARSER:-$MIMO_DEFAULT_REASONING_PARSER}"
   --enable-auto-tool-choice --tool-call-parser "${TOOL_PARSER:-$MIMO_DEFAULT_TOOL_PARSER}"
   --enable-prefix-caching --async-scheduling
   --port "$PORT"
-  ${FL_ARGS[@]+"${FL_ARGS[@]}"} "${GRAPH_ARGS[@]}" ${SPEC[@]+"${SPEC[@]}"})
+  ${FL_ARGS[@]+"${FL_ARGS[@]}"} "${GRAPH_ARGS[@]}" ${SPEC[@]+"${SPEC[@]}"} ${KV_OFFLOAD[@]+"${KV_OFFLOAD[@]}"}
+  ${FAIR_ARGS[@]+"${FAIR_ARGS[@]}"})
 # Additional arguments are whitespace-separated.
 read -r -a EXTRA <<< "${EXTRA_ARGS:-}"
 # FlexibleArgumentParser accepts abbreviations, underscores and dotted JSON keys.
@@ -284,6 +331,7 @@ CONTROLLED_ARGS=(
   --mm-encoder-tp-mode --mm-encoder-attn-dtype
   --max-model-len --gpu-memory-utilization --device-memory-utilization --kv-cache-memory-bytes --kv-cache-memory
   --num-gpu-blocks-override --block-size --trust-remote-code
+  --prefill-chunk-with-decodes --max-num-partial-prefills
   # No KV or weight offload.
   --cpu-offload-gb --cpu-offload-params --offload-backend --offload-group-size --offload-num-in-group
   --offload-prefetch-step --offload-params --kv-offloading-size --kv-offloading-backend --kv-transfer-config
@@ -315,7 +363,7 @@ for argument in ${EXTRA[@]+"${EXTRA[@]}"}; do
   fi
 done
 CMD+=(${EXTRA[@]+"${EXTRA[@]}"})
-echo "serve.sh: MiMo-V2.6-Flash-RL NVFP4 TP=$TP PP=$PP GPUs=$CUDA_VISIBLE_DEVICES KV=$KV_DTYPE KV_MEM=$KV_MEM ctx=$MAX_LEN speculation=$MODE${SPEC_N:+ k=$SPEC_N}${SPEC_SCHEDULE:+ schedule=$SPEC_SCHEDULE}${SPEC_ADAPTIVE_K:+ adaptive_k=$SPEC_ADAPTIVE_K} EP=$EXPERT_PARALLEL FIRST_LIGHT=$FIRST_LIGHT"
+echo "serve.sh: MiMo-V2.6-Flash-RL NVFP4 TP=$TP PP=$PP GPUs=$CUDA_VISIBLE_DEVICES KV=$KV_DTYPE KV_MEM=$KV_MEM ctx=$MAX_LEN speculation=$MODE${SPEC_N:+ k=$SPEC_N}${SPEC_SCHEDULE:+ schedule=$SPEC_SCHEDULE}${SPEC_ADAPTIVE_K:+ adaptive_k=$SPEC_ADAPTIVE_K} EP=$EXPERT_PARALLEL KV_OFFLOAD=${KV_OFFLOAD_GB}G${KV_OFFLOAD_DIR:++disk} FAIR_CHUNK=$FAIR_CHUNK FIRST_LIGHT=$FIRST_LIGHT"
 echo "serve.sh: CUDA graph mode=$GRAPH_MODE (GRAPH_MODE=$GRAPH_MODE)"
 BOOT_CHECK=${BOOT_CHECK:-1}
 case "$BOOT_CHECK" in 0|1) ;; *) echo "[boot-check] FAIL: BOOT_CHECK must be 0 or 1" >&2; exit 2 ;; esac
