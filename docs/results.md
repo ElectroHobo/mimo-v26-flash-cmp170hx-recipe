@@ -70,6 +70,25 @@ and at eight users costs structured output and code (−14 % / −11 %), so the
 default stays at 7 drafts throughout; set a schedule if your traffic is
 prose-heavy at moderate concurrency.
 
+### Adaptive draft depth (the engine's `adaptive_k`)
+
+The fork can pick the draft count per step from the request count and from
+recent acceptance (`SPEC_ADAPTIVE_K`, the engine's `adaptive_k`; what the GLM
+recipe calls calibrated adaptive depth). Two settings, same protocol:
+
+| | default (7 drafts) | by load 7,7,6,5,4 + acceptance | acceptance only, 4–7 |
+|---|---:|---:|---:|
+| 1 user, structured / code / prose | 308.6 / 286.1 / 178.8 | **323.8 / 300.3 / 192.7** | 303.3 / 285.3 / 184.8 |
+| 2 users | 426.5 / 372.0 / 232.5 | 377.1 / 394.7 / 262.2 | 438.8 / **413.9 / 273.2** |
+| 4 users | 582.1 / 525.0 / 329.3 | **614.3 / 564.4 / 361.4** | 508.1 / 544.2 / **370.2** |
+| 8 users | **696.8 / 659.0** / 413.3 | 609.6 / 580.1 / 416.6 | 696.8 / 625.7 / 398.8 |
+
+Prose gains 8–17 % wherever the depth can drop; structured output loses
+13–14 % wherever it does. The step costs given to the chooser (`costs`) were
+estimates, not measured. The default stays at a fixed 7; set
+`SPEC_ADAPTIVE_K={"by_load":[7,7,6,5,4],"accept":{"costs":[1.0,1.04,1.08,1.12]}}`
+for traffic that is mostly prose at low concurrency.
+
 ### Expert parallelism
 
 `EXPERT_PARALLEL=1` (whole routed experts per card, vLLM `--enable-expert-parallel`)
@@ -83,6 +102,22 @@ instead of slicing every expert four ways, same protocol:
 | 8 users | **696.8 / 659.0 / 413.3** | 658.2 / 631.4 / 392.0 |
 
 Slower by 4–9 % on every row, so it is off by default.
+
+### Peer-to-peer off
+
+`P2P=off` (NCCL through host memory, no custom all-reduce over peer access),
+same protocol:
+
+| | default (P2P on) | P2P off |
+|---|---:|---:|
+| 1 user, structured / code / prose | **308.6 / 286.1 / 178.8** | 181.3 / 164.4 / 96.8 |
+| 2 users | **426.5 / 372.0 / 232.5** | 228.4 / 210.5 / 139.5 |
+| 4 users | **582.1 / 525.0 / 329.3** | 304.9 / 296.7 / 185.3 |
+| 8 users | **696.8 / 659.0 / 413.3** | 426.1 / 388.9 / 254.3 |
+
+About 40 % slower on every row. On this host (one PLX switch, Broadwell CPUs)
+peer access is essential for TP4; a report of P2P hurting TP4 on a similar
+host (PixelML/club-170hx) does not hold for this model and engine.
 
 ### The MTP head instead of DFlash
 
