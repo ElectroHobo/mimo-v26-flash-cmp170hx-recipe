@@ -47,7 +47,7 @@ API); see [`examples/`](../examples/).
 |---|---|---|---|
 | What drafts | MiMo's DFlash model, 5 layers, in the checkpoint's `dflash/` folder | the one-layer MTP head inside the checkpoint | nothing |
 | Drafts per step | 7 (`SPEC_N`, 1–8) | 2 (`SPEC_N`) | — |
-| Best for | structured output and code: most drafts accepted | prose-heavy work: accepts more evenly | measuring the base model; set `BOOT_CHECK=0` |
+| Best for | everything measured: 309 / 286 / 179 tok/s for one user (structured / code / prose) | fp8 KV, or the largest KV pool (1.82 M tokens): 129 / 120 / 115 tok/s for one user | measuring the base model; set `BOOT_CHECK=0` |
 | KV precision | bf16 only | bf16 or `KV_DTYPE=fp8_e4m3` | bf16 or fp8 |
 
 Changing any of these needs `./start.sh restart`.

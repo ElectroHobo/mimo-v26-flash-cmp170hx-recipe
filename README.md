@@ -32,8 +32,9 @@ not both.
 
 > **This is a community recipe.** It is made and maintained by its author, not
 > by Morrowmake, who has not tested, endorsed or supported it. It runs on their
-> engine and their image, unmodified; what is ours is the configuration, the
-> scripts around it and the measurements. Report problems in
+> engine and their image; what is ours is the configuration, the scripts
+> around it, one bind-mounted engine file ([`patches/`](patches/), upstream
+> vLLM #58235's vision fix) and the measurements. Report problems in
 > [this repository's issues](https://github.com/ElectroHobo/mimo-v26-flash-cmp170hx-recipe/issues).
 
 > **Which setups this release is for.** Four cards in tensor-parallel 4,
@@ -81,6 +82,7 @@ per card. Tensor-parallel 4; the four cards are chosen with
 | Precision | NVFP4 weights (ModelOpt mixed precision), run through Marlin as 4-bit weights with bf16 activations; bf16 KV cache |
 | Speculation | MiMo's DFlash drafter (the checkpoint's `dflash/` folder), 7 draft tokens; the MTP head is the alternative |
 | Graphs | the whole decode step as one CUDA graph (`FULL_AND_PIECEWISE`) |
+| Patch | one engine file bind-mounted over the image's copy: `mimo_v2_omni.py` with upstream vLLM [#58235](https://github.com/vllm-project/vllm/pull/58235)'s vision-sink fix ([`patches/`](patches/)); `VISION_PATCH=0` runs without it, text unchanged, images misread |
 
 The engine's `MiMoV2OmniForCausalLM` is selected with `--hf-overrides`, so the
 checkpoint files are used as downloaded.
@@ -114,10 +116,10 @@ is where the spread between the columns comes from.
 | Quality | HumanEval 161/164; GSM8K 195/200 (first 200 problems), thinking on |
 | Arithmetic sanity | (45×12)+(78/6) = 553 |
 | Context | 1,048,576 tokens accepted |
+| Image input | a red/blue split image is described correctly with the patch; without it, misread (see `patches/`) |
 
-Not yet measured: image, video and audio input on this engine (the model
-class supports them), sustained load, sixteen users, long-context retrieval.
-See [docs/known-limits.md](docs/known-limits.md).
+Not yet measured: video and audio input, sustained load, sixteen users,
+long-context retrieval. See [docs/known-limits.md](docs/known-limits.md).
 
 ## Using it
 
@@ -157,7 +159,7 @@ run); a prefix assignment beats `.env` for one run
 | `API_KEY` | unset | require `Authorization: Bearer <key>` |
 | `SERVED_MODEL_NAME` | `mimo-v2.6-flash` | model id clients send |
 | `MODELS_DIR` | `./models` | checkpoint location |
-| `SPEC_MODE` | `dflash` | `dflash` (MiMo's drafter), `mtp` (the head in the checkpoint) or `none` (set `BOOT_CHECK=0`, the startup check expects drafting) |
+| `SPEC_MODE` | `dflash` | `dflash` (MiMo's drafter, fastest everywhere measured), `mtp` (the head in the checkpoint; allows fp8 KV) or `none` (set `BOOT_CHECK=0`, the startup check expects drafting) |
 | `SPEC_N` | `7` / `2` | draft tokens per step for dflash / mtp |
 | `MAX_LEN` | `1048576` | context; lowering it frees nothing, the KV cache is a byte budget |
 | `KV_MEM` | `10737418240` | KV cache bytes per card (10 GiB ≈ 1.64 M tokens) |
@@ -173,11 +175,13 @@ not a serving mode. Everything else is in [`.env.advanced.example`](.env.advance
 
 ### Choosing a drafter
 
-DFlash is the default because it is much faster where it works: it accepts
-most drafts on structured output and code. On prose it accepts about one draft
-in five, and the MTP head, which accepts more evenly, can come out ahead for
-prose-heavy work (`SPEC_MODE=mtp`, measured on another engine build only; see
-[docs/results.md](docs/results.md)).
+DFlash is the default and the faster choice for every kind of output measured:
+with the MTP head instead (`SPEC_MODE=mtp`, 2 drafts) one user gets
+128.9 / 119.6 / 114.5 tok/s (structured / code / prose) and eight users
+417.2 / 379.8 / 362.3, so even on prose, where DFlash accepts only a fifth of
+its drafts, DFlash is ahead. MTP remains for two reasons: it allows
+`KV_DTYPE=fp8_e4m3`, and without the drafter's weights the KV pool grows to
+1,823,860 tokens. `SPEC_MODE=none` is for measuring the base model.
 
 ## Update
 

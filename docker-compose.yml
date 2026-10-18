@@ -73,6 +73,8 @@ services:
       - ./p2p_check.py:/recipe/p2p_check.py:ro
       - ./p2p_check.sh:/recipe/p2p_check.sh:ro
       - ./p2p_probe.cu:/recipe/p2p_probe.cu:ro
+      # upstream vLLM #58235's vision-sink fix over the engine's copy (patches/README.md)
+      - ./patches/mimo_v2_omni.py:/opt/vllm-src/vllm/model_executor/models/mimo_v2_omni.py:ro
       - ${MODELS_DIR:-./models}/MiMo-V2.6-Flash-RL-NVFP4:/models/MiMo-V2.6-Flash-RL-NVFP4:ro
       - ./cache:/cache
     healthcheck:
