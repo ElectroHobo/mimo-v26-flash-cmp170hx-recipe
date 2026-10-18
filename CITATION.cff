@@ -5,7 +5,7 @@ type: software
 authors:
   - name: "Applied Integrators"
     alias: ElectroHobo
-version: 0.1.0
+version: 0.2.0
 date-released: 2026-10-18
 license: MIT
 repository-code: "https://github.com/ElectroHobo/mimo-v26-flash-cmp170hx-recipe"

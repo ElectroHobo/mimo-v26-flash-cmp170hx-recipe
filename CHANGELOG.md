@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.0 — unreleased
+
+- Draft depth follows the number of requests: 7 drafts for one, 5 for two, 3
+  from three up (`SPEC_SCHEDULE` default; `none` restores a fixed `SPEC_N`).
+  Every request puts drafts + 1 tokens through the model per step, and in a
+  mixture of experts the step cost grows with tokens in flight, so fewer
+  drafts under load are faster: 756.6 / 754.7 / 546.5 tok/s across eight users
+  (structured / code / prose) against 0.1.0's 696.8 / 659.0 / 413.3, measured
+  the same day; one user 322.0 / 274.9 / 170.1, unchanged within spread.
+- Optional KV offload: `KV_OFFLOAD_GB` keeps evicted KV blocks in host RAM and
+  `KV_OFFLOAD_DIR` adds a disk tier behind it (vLLM's OffloadingConnector), so
+  a long shared prefix pushed off the cards is copied back instead of
+  re-prefilled; `bench/kv_offload_bench.py` measures it. Numbers in
+  `docs/results.md`.
+- The prefill chunk (`MAX_BATCHED`) is 2,048: cold prefill 2,722 tok/s against
+  2,471, for a KV pool of 1,615,953 tokens against 1,643,784 (the 0.1.0 note
+  that 8,192 would leave 0.45 M was wrong; 4,096 measured leaves 1,563,025).
+- Fair prefill on by default: `FAIR_CHUNK=384` reads a prompt in 384-token
+  slices while anyone is decoding (`FAIR_PARTIAL` prompts at once), as GLM's
+  recipe does; a user mid-answer keeps 15 tok/s instead of 10 while a 30K
+  prompt lands, and that prompt reads 20 % slower. `0` turns it off, `128`
+  favours the decoders more; measured with `bench/prefill_fairness.py`. `MAX_BATCHED` 2,048 and 4,096 measured for pool
+  and prefill; the all-reduce kernel switch measured, default kept.
+- results.md: the step time at two users is 21 ms, not 15 (the earlier figure
+  counted drafts, which are per request, not engine steps).
+- Engine, image and checkpoint pins unchanged.
+
 ## 0.1.0 — 2026-10-18
 
 First release: MiMo-V2.6-Flash-RL (NVFP4) on four CMP 170HX cards.
