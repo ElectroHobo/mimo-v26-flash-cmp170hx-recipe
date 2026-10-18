@@ -222,6 +222,14 @@ if [ "$MODE" != none ]; then
     fi
     SPEC_JSON+=",\"num_speculative_tokens_per_batch_size\":$SPEC_SCHEDULE"
   fi
+  # SPEC_ADAPTIVE_K (empty: off): the engine's load- and acceptance-adaptive draft count, a JSON
+  # object without spaces for its adaptive_k field, e.g. {"by_load":[7,7,6,5,4]}. SPEC_N must be
+  # at least the deepest count. See the engine's SpeculativeConfig.adaptive_k for the keys.
+  SPEC_ADAPTIVE_K=${SPEC_ADAPTIVE_K:-}
+  if [ -n "$SPEC_ADAPTIVE_K" ]; then
+    [[ "$SPEC_ADAPTIVE_K" =~ ^\{.*\}$ ]] || { echo 'SPEC_ADAPTIVE_K must be a JSON object' >&2; exit 2; }
+    SPEC_JSON+=",\"adaptive_k\":$SPEC_ADAPTIVE_K"
+  fi
   SPEC=(--speculative-config "$SPEC_JSON}")
 fi
 # EXPERT_PARALLEL=1 keeps whole routed experts on each card instead of slicing every
@@ -307,7 +315,7 @@ for argument in ${EXTRA[@]+"${EXTRA[@]}"}; do
   fi
 done
 CMD+=(${EXTRA[@]+"${EXTRA[@]}"})
-echo "serve.sh: MiMo-V2.6-Flash-RL NVFP4 TP=$TP PP=$PP GPUs=$CUDA_VISIBLE_DEVICES KV=$KV_DTYPE KV_MEM=$KV_MEM ctx=$MAX_LEN speculation=$MODE${SPEC_N:+ k=$SPEC_N}${SPEC_SCHEDULE:+ schedule=$SPEC_SCHEDULE} EP=$EXPERT_PARALLEL FIRST_LIGHT=$FIRST_LIGHT"
+echo "serve.sh: MiMo-V2.6-Flash-RL NVFP4 TP=$TP PP=$PP GPUs=$CUDA_VISIBLE_DEVICES KV=$KV_DTYPE KV_MEM=$KV_MEM ctx=$MAX_LEN speculation=$MODE${SPEC_N:+ k=$SPEC_N}${SPEC_SCHEDULE:+ schedule=$SPEC_SCHEDULE}${SPEC_ADAPTIVE_K:+ adaptive_k=$SPEC_ADAPTIVE_K} EP=$EXPERT_PARALLEL FIRST_LIGHT=$FIRST_LIGHT"
 echo "serve.sh: CUDA graph mode=$GRAPH_MODE (GRAPH_MODE=$GRAPH_MODE)"
 BOOT_CHECK=${BOOT_CHECK:-1}
 case "$BOOT_CHECK" in 0|1) ;; *) echo "[boot-check] FAIL: BOOT_CHECK must be 0 or 1" >&2; exit 2 ;; esac

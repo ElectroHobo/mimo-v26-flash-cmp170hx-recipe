@@ -9,6 +9,9 @@ in ([results.md](results.md)). Longer runs have not been measured.
 
 ## Known limits
 
+- **Peer-to-peer must work**: with `P2P=off` decode is about 40 % slower on every
+  measurement (results.md). Without a P2P-capable driver build the server runs,
+  but not at the published speed.
 - **Measured on one machine only**: four CMP 170HX with the x16 modification
   on one PLX switch, peer-to-peer on, driver 610.57.04. Other link widths,
   switches or drivers are untested.

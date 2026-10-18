@@ -168,6 +168,7 @@ run); a prefix assignment beats `.env` for one run
 | `MAX_BATCHED` | `1024` | tokens per scheduler step; bigger costs KV pool (see `.env.advanced.example`) |
 | `P2P` | `auto` | `auto` (content-checked), `off`, `force` |
 | `SPEC_SCHEDULE` | empty | drafts by batch size, e.g. `[[1,2,7],[3,32,4]]`; helps prose at moderate concurrency, costs structured output at eight users (`docs/results.md`) |
+| `SPEC_ADAPTIVE_K` | empty | the engine's load- and acceptance-adaptive draft depth, a JSON object; helps prose, costs structured output (`docs/results.md`) |
 | `EXPERT_PARALLEL` | `0` | `1` keeps whole experts per card; measured 4–9 % slower here |
 | `EXTRA_ARGS` | empty | extra vLLM arguments; options that change the deployment are refused |
 
