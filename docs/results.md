@@ -52,6 +52,38 @@ of 7 drafts per step, 99 % are accepted on a counting task, about half on code
 and a fifth on prose. On an easier structured task (counting) one user reaches
 530 tok/s; the structured prompt in the table is a 40-row markdown table.
 
+### Fewer drafts for larger batches
+
+`SPEC_SCHEDULE=[[1,2,7],[3,32,4]]` (7 drafts for one or two users, 4 from
+three users up), same protocol:
+
+| | default (7 drafts always) | schedule |
+|---|---:|---:|
+| 1 user, structured / code / prose | 308.6 / 286.1 / 178.8 | 328.2 / 289.1 / 177.4 |
+| 2 users | 426.5 / 372.0 / 232.5 | 442.3 / 387.8 / 247.7 |
+| 4 users | 582.1 / 525.0 / 329.3 | 564.9 / 544.6 / **389.2** |
+| 8 users | **696.8 / 659.0** / 413.3 | 599.6 / 583.4 / 420.5 |
+
+One and two users run the same depth, so those rows show the run-to-run
+spread (a few percent). Shallower drafting at four users helps prose (+18 %)
+and at eight users costs structured output and code (−14 % / −11 %), so the
+default stays at 7 drafts throughout; set a schedule if your traffic is
+prose-heavy at moderate concurrency.
+
+### Expert parallelism
+
+`EXPERT_PARALLEL=1` (whole routed experts per card, vLLM `--enable-expert-parallel`)
+instead of slicing every expert four ways, same protocol:
+
+| | default | expert parallel |
+|---|---:|---:|
+| 1 user, structured / code / prose | **308.6 / 286.1 / 178.8** | 297.2 / 260.4 / 170.1 |
+| 2 users | **426.5 / 372.0 / 232.5** | 388.2 / 364.9 / 234.6 |
+| 4 users | **582.1 / 525.0 / 329.3** | 559.7 / 500.7 / 313.9 |
+| 8 users | **696.8 / 659.0 / 413.3** | 658.2 / 631.4 / 392.0 |
+
+Slower by 4–9 % on every row, so it is off by default.
+
 ### The MTP head instead of DFlash
 
 `SPEC_MODE=mtp` (2 drafts), same protocol, same boot:
