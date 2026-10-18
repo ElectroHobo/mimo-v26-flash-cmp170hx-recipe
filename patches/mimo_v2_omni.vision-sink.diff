@@ -1,0 +1,20 @@
+--- a/vllm/model_executor/models/mimo_v2_omni.py (engine 18305948a)
++++ b/vllm/model_executor/models/mimo_v2_omni.py
+@@ -263,7 +263,7 @@
+             sliding_window_q=w,
+             sliding_window_k=w,
+             sinks=sinks,
+-            sinks_bias_key0=True,
++            sinks_bias_key0=False,
+         )
+         return output
+ 
+@@ -1229,6 +1229,8 @@
+ class MiMoV2OmniForCausalLM(
+     nn.Module, SupportsMultiModal, SupportsPP, SupportsQuant, SupportsEagle3
+ ):
++    packed_modules_mapping = MiMoV2FlashForCausalLM.packed_modules_mapping.copy()
++
+     # To ensure correct weight loading and mapping.
+     hf_to_vllm_mapper = WeightsMapper(
+         orig_to_new_prefix={

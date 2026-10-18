@@ -12,13 +12,16 @@ time on one machine. It is not yet soaked.
 - **Measured on one machine only**: four CMP 170HX with the x16 modification
   on one PLX switch, peer-to-peer on, driver 610.57.04. Other link widths,
   switches or drivers are untested.
-- **Multimodal input is not measured.** The engine's omni model class is
-  selected and loads the vision and audio towers, but no image, video or audio
-  request has been tested on this engine build. Text is what the numbers cover.
-- **DFlash is weak on prose.** The drafter accepts about one draft in five on
-  essay-style output, against most drafts on code and structured output. For
-  prose-heavy work try `SPEC_MODE=mtp`; its numbers on this engine are not yet
-  published.
+- **Image input needs the bind-mounted patch.** The fork's `mimo_v2_omni.py`
+  applies the vision encoder's attention sink in a form that is a no-op on
+  uniform inputs, so flat-colour images are misread (upstream vLLM #58235, not
+  yet merged there or in the fork). The recipe mounts a patched copy
+  (`patches/`); with it a red/blue test image is described correctly. Only that
+  one image test has been run; video and audio input are untested.
+- **DFlash accepts few drafts on prose** (about one in five, against most on
+  code and structured output), so prose decodes at 179 tok/s for one user
+  against 309 on structured output. The MTP head is not the answer: it is
+  slower on every column measured (`docs/results.md`).
 - **fp8 KV is only available without DFlash.** The drafter runs on the Triton
   attention backend, which has no fp8 KV path on sm_80, so `KV_DTYPE=fp8_e4m3`
   needs `SPEC_MODE=mtp` or `none`.

@@ -8,7 +8,8 @@
 # 127.0.0.1:8000 as "mimo-v2.6-flash" (local only unless you set HOST; no API
 # key unless you set API_KEY), MiMo's DFlash drafter at k=7, 1,048,576-token
 # context, text/image/video/audio input, tensor-parallel 4. Every weight is on
-# the GPUs; bf16 KV, 10 GiB of KV cache per card.
+# the GPUs; bf16 KV, 10 GiB of KV cache per card. The engine image is used as
+# released, plus one bind-mounted file (patches/README.md).
 #
 # The engine runs in a container: Docker with the NVIDIA Container Toolkit,
 # image pinned by digest. docker-compose.yml runs the same container.
@@ -471,6 +472,11 @@ container_args() {
         -v "$SCRIPT_DIR/p2p_check.sh:/recipe/p2p_check.sh:ro"
         -v "$SCRIPT_DIR/p2p_probe.cu:/recipe/p2p_probe.cu:ro"
         -v "$MODEL:/models/$(basename "$MODEL"):ro")
+    # One engine file replaced by bind mount: upstream vLLM #58235's vision-sink fix
+    # (patches/README.md). VISION_PATCH=0 runs the engine's own copy.
+    if [ "${VISION_PATCH:-1}" = 1 ]; then
+        CRUN+=(-v "$SCRIPT_DIR/patches/mimo_v2_omni.py:/opt/vllm-src/vllm/model_executor/models/mimo_v2_omni.py:ro")
+    fi
     CRUN+=(-v "$CACHE_DIR:/cache"
         --entrypoint /bin/bash "$IMAGE" /recipe/serve.sh "$SPEC_MODE")
 }

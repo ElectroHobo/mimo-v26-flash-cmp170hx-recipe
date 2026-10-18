@@ -52,19 +52,33 @@ of 7 drafts per step, 99 % are accepted on a counting task, about half on code
 and a fifth on prose. On an easier structured task (counting) one user reaches
 530 tok/s; the structured prompt in the table is a 40-row markdown table.
 
+### The MTP head instead of DFlash
+
+`SPEC_MODE=mtp` (2 drafts), same protocol, same boot:
+
+| | TP4, peer-to-peer on |
+|---|---:|
+| Streaming decode, 1 user, structured / code / prose | 128.9 / 119.6 / 114.5 tok/s |
+| Decode, 2 users, aggregate | 193.7 / 180.6 / 173.7 tok/s |
+| Decode, 4 users, aggregate | 292.5 / 267.5 / 252.4 tok/s |
+| Decode, 8 users, aggregate | 417.2 / 379.8 / 362.3 tok/s |
+| KV pool at 1,048,576 context | 1,823,860 tokens (1.74 full-length requests) |
+
+The boot check accepted 248 of 1,040 MTP drafts (24 %), against 671 of 693 for
+DFlash on the same two prompts. DFlash is the better drafter for every column.
+
 ### Context and sanity
 
 | Check | Result |
 |---|---|
 | `(45*12)+(78/6)` | 553 |
 | Context | 1,048,576-token requests accepted (the KV pool holds 1.57 of them) |
+| Image | a 448×448 image, red left half and blue right half: "The left half of the image is red, and the right half is blue" (227 prompt tokens), with `patches/mimo_v2_omni.py` mounted. Without it: "white and red" / "entirely red" |
 
 ### What was not measured
 
-Image, video and audio input on this engine build; sixteen or more users;
-sustained load; long-context retrieval; `SPEC_MODE=mtp` on this engine (on an
-earlier engine build the MTP head accepted drafts more evenly and came out
-ahead of DFlash on prose, which is why it is kept as an option).
+Video and audio input; sixteen or more users; sustained load; long-context
+retrieval. Image input beyond the one test above.
 
 ## Notes on the method
 
