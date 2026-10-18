@@ -160,7 +160,17 @@ export CUDA_VISIBLE_DEVICES
 SPEC_MODE="${SPEC_MODE:-dflash}"
 case "$SPEC_MODE" in dflash|mtp|none) ;; *) die "SPEC_MODE must be dflash, mtp or none, not '$SPEC_MODE'" ;; esac
 CONTAINER_NAME="${CONTAINER_NAME:-mimo-v26-flash}"
-SHM_SIZE="${SHM_SIZE:-32g}"
+# KV offload: a RAM tier of KV_OFFLOAD_GB GiB lives in the container's /dev/shm, so
+# the default shm grows to hold it; KV_OFFLOAD_DIR (a host directory) is mounted at
+# /kvtier for the disk tier behind it. serve.sh turns both into engine flags.
+KV_OFFLOAD_GB="${KV_OFFLOAD_GB:-0}"
+[[ "$KV_OFFLOAD_GB" =~ ^[0-9]+$ ]] || die "KV_OFFLOAD_GB must be a whole number of GiB"
+KV_OFFLOAD_DIR="${KV_OFFLOAD_DIR:-}"
+if [ "$KV_OFFLOAD_GB" != 0 ]; then
+    SHM_SIZE="${SHM_SIZE:-$((KV_OFFLOAD_GB + 32))g}"
+else
+    SHM_SIZE="${SHM_SIZE:-32g}"
+fi
 CACHE_DIR="${CACHE_DIR:-$SCRIPT_DIR/cache}"
 READY_TIMEOUT="${READY_TIMEOUT:-1800}"
 BOOT_CHECK="${BOOT_CHECK:-1}"
@@ -418,12 +428,14 @@ publish_addr() {
 # every setting of yours that serve.sh reads. serve.sh (mounted from this
 # checkout) turns them into the server's flags.
 CONTAINER_KEYS="P2P P2P_PREBUILT P2P_CHECK_CACHE LAYOUT CUDA_VISIBLE_DEVICES MAX_LEN MAX_SEQS MAX_BATCHED GPU_UTIL
-KV_MEM KV_DTYPE SPEC_N SPEC_SCHEDULE SPEC_ADAPTIVE_K EXPERT_PARALLEL VISION_PATCH GRAPH_MODE FIRST_LIGHT REASONING_PARSER TOOL_PARSER EXTRA_ARGS
+KV_MEM KV_DTYPE SPEC_N SPEC_SCHEDULE SPEC_ADAPTIVE_K KV_OFFLOAD_GB FAIR_CHUNK FAIR_PARTIAL EXPERT_PARALLEL VISION_PATCH GRAPH_MODE FIRST_LIGHT REASONING_PARSER TOOL_PARSER EXTRA_ARGS
 SERVED_MODEL_NAME API_KEY"
 container_env() {
     local k
     echo "VENV=/opt/venv"
     echo "MODEL=/models/$(basename "$MODEL")"
+    # The disk tier directory is mounted at /kvtier (container_args).
+    [ -n "$KV_OFFLOAD_DIR" ] && echo "KV_OFFLOAD_DIR=/kvtier"
     echo "CUDA_HOME=/usr/local/cuda"
     echo "HOST=0.0.0.0"
     echo "PORT=8000"
@@ -476,6 +488,10 @@ container_args() {
     # (patches/README.md). VISION_PATCH=0 runs the engine's own copy.
     if [ "${VISION_PATCH:-1}" = 1 ]; then
         CRUN+=(-v "$SCRIPT_DIR/patches/mimo_v2_omni.py:/opt/vllm-src/vllm/model_executor/models/mimo_v2_omni.py:ro")
+    fi
+    if [ -n "$KV_OFFLOAD_DIR" ]; then
+        [ -n "${DRY:-}" ] || mkdir -p "$KV_OFFLOAD_DIR"
+        CRUN+=(-v "$KV_OFFLOAD_DIR:/kvtier")
     fi
     CRUN+=(-v "$CACHE_DIR:/cache"
         --entrypoint /bin/bash "$IMAGE" /recipe/serve.sh "$SPEC_MODE")
