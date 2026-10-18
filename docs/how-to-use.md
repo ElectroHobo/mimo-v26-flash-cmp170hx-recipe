@@ -46,11 +46,25 @@ API); see [`examples/`](../examples/).
 | | `SPEC_MODE=dflash` (default) | `SPEC_MODE=mtp` | `SPEC_MODE=none` |
 |---|---|---|---|
 | What drafts | MiMo's DFlash model, 5 layers, in the checkpoint's `dflash/` folder | the one-layer MTP head inside the checkpoint | nothing |
-| Drafts per step | 7 (`SPEC_N`, 1–8) | 2 (`SPEC_N`) | — |
-| Best for | everything measured: 309 / 286 / 179 tok/s for one user (structured / code / prose) | fp8 KV, or the largest KV pool (1.82 M tokens): 129 / 120 / 115 tok/s for one user | measuring the base model; set `BOOT_CHECK=0` |
+| Drafts per step | 7 for one request, 5 for two, 3 from three up (`SPEC_SCHEDULE`; `SPEC_N`, 1–8, caps it) | 2 (`SPEC_N`) | — |
+| Best for | everything measured: 322 / 275 / 170 tok/s for one user (structured / code / prose) | fp8 KV, or the largest KV pool (1.82 M tokens): 129 / 120 / 115 tok/s for one user | measuring the base model; set `BOOT_CHECK=0` |
 | KV precision | bf16 only | bf16 or `KV_DTYPE=fp8_e4m3` | bf16 or fp8 |
 
 Changing any of these needs `./start.sh restart`.
+
+## Keep long contexts around (KV offload)
+
+Off by default. When several requests share a long prefix (agents working
+from the same documents, a long chat that keeps going), other traffic can push
+that prefix's KV off the cards and the next request re-reads it: about 50 s
+for 100K tokens here. `KV_OFFLOAD_GB=64` in `.env` keeps evicted blocks in
+host RAM and copies them back in under a second (`docs/results.md`); the
+container's `/dev/shm` grows to hold the tier, so the host needs that much RAM
+free. `KV_OFFLOAD_DIR=/path/on/a/fast/disk` adds a disk tier behind the RAM
+tier: a reload from a SATA SSD took about 5 s, and the directory is
+write-through and never pruned by the engine, so give it a disk of its own
+and prune it yourself. Both need `./start.sh restart`. The KV pool on the
+cards does not change.
 
 ## Serving other machines
 
@@ -83,7 +97,7 @@ right.
 ### Memory
 
 `KV_MEM` is the KV cache budget per card in bytes (default 10 GiB, about
-1.64 M tokens at bf16). `MAX_LEN` caps a request and does not change memory.
+1.62 M tokens at bf16 with the 2,048 chunk). `MAX_LEN` caps a request and does not change memory.
 `MAX_BATCHED` is the prefill chunk and trades KV pool for prefill speed, see
 `.env.advanced.example`. `GPU_UTIL` is fixed at 0.94.
 

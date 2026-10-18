@@ -1,12 +1,12 @@
 # MiMo-V2.6-Flash-RL on 4× CMP 170HX
 
 [![engine](https://img.shields.io/badge/engine-vllm--cmp170hx%2018305948ac-blue)](https://github.com/Morrowmake/vllm-cmp170hx/tree/18305948acba3f4c4d912cdd56f2202d2ebd94e8)
-![release](https://img.shields.io/badge/release-0.1.0-2ea44f)
+![release](https://img.shields.io/badge/release-0.2.0-2ea44f)
 
 **XiaomiMiMo's MiMo-V2.6-Flash-RL (309B MoE, 15B active, text / image / video /
 audio input) on four CMP 170HX cards with the full 1,048,576-token context:
-309 / 286 / 179 tok/s for one user (structured / code / prose), 697 / 659 / 413
-tok/s across eight, 2,470 tok/s cold prefill and a 1,643,784-token KV pool.
+322 / 275 / 170 tok/s for one user (structured / code / prose), 754 / 738 / 556
+tok/s across eight, 2,720 tok/s cold prefill and a 1,615,953-token KV pool.
 NVFP4 weights, bf16 KV, MiMo's own DFlash drafter, every weight on the GPUs.**
 
 Serve [ProCreations/MiMo-V2.6-Flash-RL-NVFP4](https://huggingface.co/ProCreations/MiMo-V2.6-Flash-RL-NVFP4)
@@ -100,16 +100,20 @@ real-text prompts, three repeats each, no cache hits. The harness is
 
 | | Tensor-parallel 4 + peer-to-peer |
 |---|---:|
-| **1 user** · structured / code / prose | **308.6 / 286.1 / 178.8** tok/s |
-| **2 users, total** · structured / code / prose | 426.5 / 372.0 / 232.5 |
-| **4 users, total** · structured / code / prose | 582.1 / 525.0 / 329.3 |
-| **8 users, total** · structured / code / prose | 696.8 / 659.0 / 413.3 |
-| **Prompt reading** (cold prefill) | 2,473 tok/s (24K / 34K / 38K-token prompts) |
-| **KV pool** (tokens) | 1,643,784 (1.57 full-length requests) |
+| **1 user** · structured / code / prose | **322.0 / 274.9 / 170.1** tok/s |
+| **2 users, total** · structured / code / prose | 427.0 / 397.7 / 255.1 |
+| **4 users, total** · structured / code / prose | 572.7 / 538.3 / 412.1 |
+| **8 users, total** · structured / code / prose | 753.8 / 738.0 / 555.5 |
+| **Prompt reading** (cold prefill) | 2,722 tok/s (24K / 34K / 38K-token prompts) |
+| **KV pool** (tokens) | 1,615,953 (1.54 full-length requests) |
 
-Decode is 14.8 ms per step for one user whatever the prompt; the drafter is
-accepted 99 % of the time on counting, ~50 % on code and ~20 % on prose, which
-is where the spread between the columns comes from.
+Decode is 15 ms per step for one user whatever the prompt, 21 ms at two and
+about 48 at eight; the drafter is accepted 99 % of the time on counting, ~50 %
+on code and ~20 % on prose, which is where the spread between the columns comes
+from. The drafter runs 7 deep for one request, 5 for two and 3 from three up:
+in a mixture of experts the step cost grows with tokens in flight, so fewer
+drafts under load gave +11 % / +12 % / +39 % at eight users over a fixed 7
+([Results](docs/results.md)).
 
 | Other measurements | Value |
 |---|---|
@@ -160,16 +164,19 @@ run); a prefix assignment beats `.env` for one run
 | `SERVED_MODEL_NAME` | `mimo-v2.6-flash` | model id clients send |
 | `MODELS_DIR` | `./models` | checkpoint location |
 | `SPEC_MODE` | `dflash` | `dflash` (MiMo's drafter, fastest everywhere measured), `mtp` (the head in the checkpoint; allows fp8 KV) or `none` (set `BOOT_CHECK=0`, the startup check expects drafting) |
-| `SPEC_N` | `7` / `2` | draft tokens per step for dflash / mtp |
+| `SPEC_N` | `7` / `2` | most draft tokens per step for dflash / mtp |
 | `MAX_LEN` | `1048576` | context; lowering it frees nothing, the KV cache is a byte budget |
-| `KV_MEM` | `10737418240` | KV cache bytes per card (10 GiB ≈ 1.64 M tokens) |
+| `KV_MEM` | `10737418240` | KV cache bytes per card (10 GiB ≈ 1.62 M tokens) |
 | `KV_DTYPE` | `bfloat16` | or `fp8_e4m3` with `mtp` / `none` |
 | `MAX_SEQS` | `32` | concurrent sequences |
-| `MAX_BATCHED` | `1024` | tokens per scheduler step; bigger costs KV pool (see `.env.advanced.example`) |
+| `MAX_BATCHED` | `2048` | tokens per scheduler step; bigger reads prompts faster and costs KV pool (`1024`: −10 % prefill, +1.7 % pool; `4096`: +5 %, −3 %; see `.env.advanced.example`) |
+| `FAIR_CHUNK` | `384` | fair prefill: while anyone is decoding, prompts are read in slices of this many tokens so a mid-answer user keeps moving; `128` favours the decoders more, `0` turns it off (`docs/results.md`) |
 | `P2P` | `auto` | `auto` (content-checked), `off`, `force` |
-| `SPEC_SCHEDULE` | empty | drafts by batch size, e.g. `[[1,2,7],[3,32,4]]`; helps prose at moderate concurrency, costs structured output at eight users (`docs/results.md`) |
+| `SPEC_SCHEDULE` | `7 / 5 / 3` | drafts by number of requests: 7 for one, 5 for two, 3 from three up (dflash). Your own ranges, e.g. `[[1,2,7],[3,32,4]]`, or `none` for `SPEC_N` always (`docs/results.md`) |
 | `SPEC_ADAPTIVE_K` | empty | the engine's load- and acceptance-adaptive draft depth, a JSON object; helps prose, costs structured output (`docs/results.md`) |
 | `EXPERT_PARALLEL` | `0` | `1` keeps whole experts per card; measured 4–9 % slower here |
+| `KV_OFFLOAD_GB` | `0` | GiB of host RAM that keeps KV blocks evicted from the cards, so a long prefix comes back by copy instead of re-prefill (`docs/results.md`) |
+| `KV_OFFLOAD_DIR` | empty | a directory for a disk tier behind the RAM tier; write-through, never pruned by the engine |
 | `EXTRA_ARGS` | empty | extra vLLM arguments; options that change the deployment are refused |
 
 GPU memory fraction (0.94) and the tensor-parallel layout are fixed: `serve.sh`
@@ -207,7 +214,7 @@ the checkpoint and the model are MIT (see [docs/model-licences.md](docs/model-li
   recipe adapts. Not involved in this recipe.
 - **kaka86mm** — [vllm-mimo-170hx](https://github.com/kaka86mm/vllm-mimo-170hx)
   (MIT), the first MiMo-V2.6 deployment on these cards; the launch
-  configuration here (block size, the 1,024-token prefill chunk and its KV-pool
+  configuration here (block size, the small prefill chunk and its KV-pool
   finding, the KV budget, the parsers) descends from theirs.
 - **ProCreations** — the [NVFP4 checkpoint](https://huggingface.co/ProCreations/MiMo-V2.6-Flash-RL-NVFP4)
   (MIT) and the DFlash drafter packaged with it.

@@ -2,10 +2,13 @@
 
 ## Status
 
-Release 0.1.0 is a first release. The server loads, passes the boot check,
-answers correctly on two code and maths suites, has published decode and
-prefill numbers and passed a 20-minute, 8-stream soak with image requests mixed
-in ([results.md](results.md)). Longer runs have not been measured.
+Release 0.2.0 changes the draft depth under load and adds an optional KV
+offload tier; the 0.1.0 server loaded, passed the boot check, answered
+correctly on two code and maths suites, and passed a 20-minute, 8-stream soak
+with image requests mixed in ([results.md](results.md)). Longer runs have not
+been measured, and the quality suites have not been re-run on 0.2.0 (the
+drafter changes nothing about which tokens are produced, only how many are
+proposed per step).
 
 ## Known limits
 
@@ -22,16 +25,23 @@ in ([results.md](results.md)). Longer runs have not been measured.
   (`patches/`); with it a red/blue test image is described correctly. Only that
   one image test has been run; video and audio input are untested.
 - **DFlash accepts few drafts on prose** (about one in five, against most on
-  code and structured output), so prose decodes at 179 tok/s for one user
-  against 309 on structured output. The MTP head is not the answer: it is
+  code and structured output), so prose decodes at 170 tok/s for one user
+  against 322 on structured output. The MTP head is not the answer: it is
   slower on every column measured (`docs/results.md`).
 - **fp8 KV is only available without DFlash.** The drafter runs on the Triton
   attention backend, which has no fp8 KV path on sm_80, so `KV_DTYPE=fp8_e4m3`
   needs `SPEC_MODE=mtp` or `none`.
-- **The prefill chunk is small on purpose.** `MAX_BATCHED=1024` keeps the KV
-  pool at 1.64 M tokens; each sliding-window layer reserves window plus
-  in-flight tokens per request, so a larger chunk costs pool (8,192 leaves
-  about 0.45 M). Prefill is correspondingly modest: ~2,500 tok/s cold.
+- **The prefill chunk trades KV pool for prompt speed.** `MAX_BATCHED=2048`
+  (0.2.0) gives 1.62 M tokens of pool and 2,720 tok/s cold prefill; each
+  sliding-window layer reserves in-flight tokens per request, so 1,024 has
+  1.7 % more pool and reads prompts 10 % slower, 4,096 has 3 % less pool and
+  reads 5 % faster (results.md). Prefill is modest either way.
+- **A long prompt still slows whoever is mid-answer.** With the default
+  `FAIR_CHUNK=384` a 30K prompt arriving during an answer holds that answer
+  to about 15 tok/s until the prompt is read (10 without fair prefill, 36 at
+  `128`), and the prompt itself reads 20 % slower than it would alone
+  (results.md). Decode and prefill share one engine; a disaggregated prefill
+  would be the real fix.
 - **NVFP4 runs on Marlin as 4-bit weights with bf16 activations**, the same
   path the fork uses for int4 checkpoints; there is no FP4 hardware on these
   cards. The quant has not been compared against the unquantised model beyond
