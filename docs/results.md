@@ -75,10 +75,18 @@ DFlash on the same two prompts. DFlash is the better drafter for every column.
 | Context | 1,048,576-token requests accepted (the KV pool holds 1.57 of them) |
 | Image | a 448×448 image, red left half and blue right half: "The left half of the image is red, and the right half is blue" (227 prompt tokens), with `patches/mimo_v2_omni.py` mounted. Without it: "white and red" / "entirely red" |
 
+### Soak
+
+`bench/soak.py`, 20 minutes, 8 concurrent streams of mixed prompts (six kinds,
+200–800 tokens, thinking on for half, temperature 0.7) plus one image request
+every 30 s: **1,646 requests, 0 failures, 532,160 completion tokens at a steady
+443 tok/s; 40 of 40 image requests answered correctly.** No Xid, no errors in
+the server log, cards at 41–43 °C afterwards. Log: `bench/results/release-0.1.0/soak-20min-8streams.txt`.
+
 ### What was not measured
 
-Video and audio input; sixteen or more users; sustained load; long-context
-retrieval. Image input beyond the one test above.
+Video and audio input; sixteen or more users; runs longer than the 20-minute
+soak; long-context retrieval. Image input beyond the one test above.
 
 ## Notes on the method
 

@@ -1,0 +1,25 @@
+# bench/soak.py 8099 mimo-v2.6-flash 20 8 — 2026-10-18 ~01:00 CDT, recipe defaults + patches/mimo_v2_omni.py
+# before: dmesg Xid count 0; cards 35-40 C
+   1.0 min: 74 ok, 0 failed, 21534 tokens (359 tok/s), images 2 right / 0 wrong / 0 failed
+   2.0 min: 144 ok, 0 failed, 46702 tokens (389 tok/s), images 4 right / 0 wrong / 0 failed
+   3.0 min: 226 ok, 0 failed, 74309 tokens (413 tok/s), images 6 right / 0 wrong / 0 failed
+   4.0 min: 307 ok, 0 failed, 99837 tokens (416 tok/s), images 8 right / 0 wrong / 0 failed
+   5.0 min: 398 ok, 0 failed, 124838 tokens (416 tok/s), images 10 right / 0 wrong / 0 failed
+   6.0 min: 488 ok, 0 failed, 153697 tokens (427 tok/s), images 12 right / 0 wrong / 0 failed
+   7.0 min: 571 ok, 0 failed, 183189 tokens (436 tok/s), images 14 right / 0 wrong / 0 failed
+   8.0 min: 654 ok, 0 failed, 210067 tokens (438 tok/s), images 16 right / 0 wrong / 0 failed
+   9.0 min: 741 ok, 0 failed, 235899 tokens (437 tok/s), images 18 right / 0 wrong / 0 failed
+  10.0 min: 814 ok, 0 failed, 262136 tokens (437 tok/s), images 20 right / 0 wrong / 0 failed
+  11.0 min: 896 ok, 0 failed, 290001 tokens (439 tok/s), images 22 right / 0 wrong / 0 failed
+  12.0 min: 981 ok, 0 failed, 316745 tokens (440 tok/s), images 24 right / 0 wrong / 0 failed
+  13.0 min: 1070 ok, 0 failed, 344469 tokens (442 tok/s), images 26 right / 0 wrong / 0 failed
+  14.0 min: 1150 ok, 0 failed, 371870 tokens (443 tok/s), images 28 right / 0 wrong / 0 failed
+  15.0 min: 1227 ok, 0 failed, 396939 tokens (441 tok/s), images 30 right / 0 wrong / 0 failed
+  16.0 min: 1322 ok, 0 failed, 424638 tokens (442 tok/s), images 32 right / 0 wrong / 0 failed
+  17.0 min: 1394 ok, 0 failed, 450685 tokens (442 tok/s), images 34 right / 0 wrong / 0 failed
+  18.0 min: 1471 ok, 0 failed, 478585 tokens (443 tok/s), images 36 right / 0 wrong / 0 failed
+  19.0 min: 1556 ok, 0 failed, 503920 tokens (442 tok/s), images 38 right / 0 wrong / 0 failed
+  20.0 min: 1646 ok, 0 failed, 532160 tokens (443 tok/s), images 40 right / 0 wrong / 0 failed
+  21.0 min: 1654 ok, 0 failed, 535691 tokens (425 tok/s), images 40 right / 0 wrong / 0 failed
+soak done: 21.0 min, 8 streams: 1654 requests ok, 0 failed, 535691 completion tokens (425 tok/s sustained); images 40 right / 0 wrong / 0 failed
+# after: dmesg Xid count 0; health 200; server-log error count 0; cards 41-43 C

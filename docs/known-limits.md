@@ -3,9 +3,9 @@
 ## Status
 
 Release 0.1.0 is a first release. The server loads, passes the boot check,
-answers correctly on two code and maths suites and has published decode and
-prefill numbers ([results.md](results.md)). It has run for a few hours at a
-time on one machine. It is not yet soaked.
+answers correctly on two code and maths suites, has published decode and
+prefill numbers and passed a 20-minute, 8-stream soak with image requests mixed
+in ([results.md](results.md)). Longer runs have not been measured.
 
 ## Known limits
 
