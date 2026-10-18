@@ -6,7 +6,8 @@
 # We serve ProCreations/MiMo-V2.6-Flash-RL-NVFP4 (XiaomiMiMo's MiMo-V2.6-Flash-RL
 # in NVFP4) on four GPUs with Morrowmake's vllm-cmp170hx fork: OpenAI API on
 # 127.0.0.1:8000 as "mimo-v2.6-flash" (local only unless you set HOST; no API
-# key unless you set API_KEY), MiMo's DFlash drafter at k=7, 1,048,576-token
+# key unless you set API_KEY), MiMo's DFlash drafter (7 drafts for one request,
+# 5 for two, 3 from three up), 1,048,576-token
 # context, text/image/video/audio input, tensor-parallel 4. Every weight is on
 # the GPUs; bf16 KV, 10 GiB of KV cache per card. The engine image is used as
 # released, plus one bind-mounted file (patches/README.md).
@@ -164,8 +165,13 @@ CONTAINER_NAME="${CONTAINER_NAME:-mimo-v26-flash}"
 # the default shm grows to hold it; KV_OFFLOAD_DIR (a host directory) is mounted at
 # /kvtier for the disk tier behind it. serve.sh turns both into engine flags.
 KV_OFFLOAD_GB="${KV_OFFLOAD_GB:-0}"
-[[ "$KV_OFFLOAD_GB" =~ ^[0-9]+$ ]] || die "KV_OFFLOAD_GB must be a whole number of GiB"
+[[ "$KV_OFFLOAD_GB" =~ ^(0|[1-9][0-9]*)$ ]] || die "KV_OFFLOAD_GB must be a whole number of GiB"
 KV_OFFLOAD_DIR="${KV_OFFLOAD_DIR:-}"
+if [ -n "$KV_OFFLOAD_DIR" ]; then
+    [ "$KV_OFFLOAD_GB" != 0 ] || die "KV_OFFLOAD_DIR needs a RAM tier in front of it: set KV_OFFLOAD_GB"
+    # A relative path would become a Docker named volume, not this directory.
+    [[ "$KV_OFFLOAD_DIR" = /* ]] || die "KV_OFFLOAD_DIR must be an absolute path"
+fi
 if [ "$KV_OFFLOAD_GB" != 0 ]; then
     SHM_SIZE="${SHM_SIZE:-$((KV_OFFLOAD_GB + 32))g}"
 else
@@ -536,6 +542,9 @@ container_launch() {
     fi
     mkdir -p "$LOGDIR" "$CACHE_DIR"
     [ -w "$CACHE_DIR" ] || die "$CACHE_DIR is not writable by $(id -un); the server runs as you and keeps its compile caches there. Fix its ownership or set CACHE_DIR."
+    if [ -n "$KV_OFFLOAD_DIR" ]; then
+        [ -w "$KV_OFFLOAD_DIR" ] || die "$KV_OFFLOAD_DIR is not writable by $(id -un); the server runs as you and writes the KV disk tier there. Fix its ownership or set KV_OFFLOAD_DIR."
+    fi
     log "launch: container, $SPEC_MODE, layout $LAYOUT (TP=$TP PP=$PP), ctx ${MAX_LEN:-1048576}, $(publish_addr)"
     log "  image: $IMAGE"
     log "  log: $SERVE_LOG"

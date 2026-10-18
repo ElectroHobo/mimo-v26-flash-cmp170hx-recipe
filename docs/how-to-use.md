@@ -63,8 +63,11 @@ container's `/dev/shm` grows to hold the tier, so the host needs that much RAM
 free. `KV_OFFLOAD_DIR=/path/on/a/fast/disk` adds a disk tier behind the RAM
 tier: a reload from a SATA SSD took about 5 s, and the directory is
 write-through and never pruned by the engine, so give it a disk of its own
-and prune it yourself. Both need `./start.sh restart`. The KV pool on the
-cards does not change.
+and prune it yourself. What it holds is the KV of every prompt served, which
+stays on disk until you delete it. Both need `./start.sh restart`. The KV pool on the
+cards does not change. `docker-compose.yml` does not plumb either setting:
+with Compose, raise `shm_size` yourself and mount the disk-tier directory at
+`/kvtier`.
 
 ## Serving other machines
 
