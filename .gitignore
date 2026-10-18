@@ -1,0 +1,21 @@
+# Local configuration, copied from .env.example on first run
+.env
+
+# Checkpoint (~183 GiB) -- fetch with ./download.sh
+models/
+
+# Server output, pid and lock files
+logs/*
+!logs/.gitkeep
+
+__pycache__/
+*.pyc
+.DS_Store
+
+# Compile caches written by the container
+cache/
+
+# Benchmark runs are kept per release; results from your own runs stay local
+bench/results/*
+!bench/results/.gitkeep
+!bench/results/release-*

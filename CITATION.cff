@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If this recipe helps you, please cite it and credit the engine, checkpoint and recipe authors named in README.md."
+title: "MiMo-V2.6-Flash-RL on 4x CMP 170HX: a community recipe for Morrowmake's vllm-cmp170hx"
+type: software
+authors:
+  - name: "Applied Integrators"
+    alias: ElectroHobo
+version: 0.1.0
+date-released: 2026-10-18
+license: MIT
+repository-code: "https://github.com/ElectroHobo/mimo-v26-flash-cmp170hx-recipe"
+references:
+  - type: software
+    title: "vllm-cmp170hx"
+    authors:
+      - name: Morrowmake
+    repository-code: "https://github.com/Morrowmake/vllm-cmp170hx"
+  - type: software
+    title: "qwen38-flash-next-cmp170hx-recipe"
+    authors:
+      - name: Morrowmake
+    repository-code: "https://github.com/Morrowmake/qwen38-flash-next-cmp170hx-recipe"
+  - type: software
+    title: "vllm-mimo-170hx"
+    authors:
+      - name: kaka86mm
+    repository-code: "https://github.com/kaka86mm/vllm-mimo-170hx"
