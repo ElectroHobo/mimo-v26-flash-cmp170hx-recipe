@@ -1,14 +1,15 @@
 # Changelog
 
-## 0.2.0 — unreleased
+## 0.2.0 — 2026-10-18
 
 - Draft depth follows the number of requests: 7 drafts for one, 5 for two, 3
   from three up (`SPEC_SCHEDULE` default; `none` restores a fixed `SPEC_N`).
   Every request puts drafts + 1 tokens through the model per step, and in a
   mixture of experts the step cost grows with tokens in flight, so fewer
-  drafts under load are faster: 756.6 / 754.7 / 546.5 tok/s across eight users
-  (structured / code / prose) against 0.1.0's 696.8 / 659.0 / 413.3, measured
-  the same day; one user 322.0 / 274.9 / 170.1, unchanged within spread.
+  drafts under load are faster: 753.8 / 738.0 / 555.5 tok/s across eight users
+  (structured / code / prose) against a fixed 7's 685.6 / 645.6 / 398.4
+  re-measured the same day (0.1.0 published 696.8 / 659.0 / 413.3); one user
+  322.0 / 274.9 / 170.1, unchanged within spread.
 - Optional KV offload: `KV_OFFLOAD_GB` keeps evicted KV blocks in host RAM and
   `KV_OFFLOAD_DIR` adds a disk tier behind it (vLLM's OffloadingConnector), so
   a long shared prefix pushed off the cards is copied back instead of
@@ -21,8 +22,9 @@
   slices while anyone is decoding (`FAIR_PARTIAL` prompts at once), as GLM's
   recipe does; a user mid-answer keeps 15 tok/s instead of 10 while a 30K
   prompt lands, and that prompt reads 20 % slower. `0` turns it off, `128`
-  favours the decoders more; measured with `bench/prefill_fairness.py`. `MAX_BATCHED` 2,048 and 4,096 measured for pool
-  and prefill; the all-reduce kernel switch measured, default kept.
+  favours the decoders more; measured with `bench/prefill_fairness.py`.
+- Measured and left alone: the all-reduce kernel switch
+  (`VLLM_CUSTOM_ALLREDUCE_ALGO`), default kept.
 - results.md: the step time at two users is 21 ms, not 15 (the earlier figure
   counted drafts, which are per request, not engine steps).
 - Engine, image and checkpoint pins unchanged.
