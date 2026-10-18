@@ -4,7 +4,8 @@
 # Usage: serve.sh [dflash|mtp|none|--help]
 #   (no argument)  same as "dflash" -- the default.
 #   dflash         MiMo's own DFlash drafter (the dflash/ folder of the
-#                  checkpoint), num_speculative_tokens = SPEC_N (default 7).
+#                  checkpoint), 7 drafts for one request, 5 for two, 3 from
+#                  three up (SPEC_SCHEDULE; SPEC_N, default 7, caps it).
 #   mtp            the MTP head inside the checkpoint, SPEC_N drafts (default 2).
 #   none           no speculative decoding.
 # Set DRY=1 to print the environment and the command that would run instead
@@ -25,7 +26,8 @@
 # Cards: CUDA_VISIBLE_DEVICES selects exactly four distinct physical cards
 #   (nvidia-smi numbering; default below).
 # Env overrides: MAX_LEN, MAX_SEQS, MAX_BATCHED, KV_MEM, KV_DTYPE, SPEC_N, SPEC_SCHEDULE,
-#   EXPERT_PARALLEL, GRAPH_MODE, REASONING_PARSER, TOOL_PARSER, EXTRA_ARGS, P2P, BOOT_CHECK.
+#   SPEC_ADAPTIVE_K, FAIR_CHUNK, FAIR_PARTIAL, KV_OFFLOAD_GB, KV_OFFLOAD_DIR, EXPERT_PARALLEL,
+#   GRAPH_MODE, REASONING_PARSER, TOOL_PARSER, EXTRA_ARGS, P2P, BOOT_CHECK.
 #   GPU_UTIL must stay 0.94 (refused otherwise); the KV cache is sized by KV_MEM
 #   bytes per card, not by the context, so MAX_LEN can be lowered freely.
 #   FIRST_LIGHT=1 is the 32K/eager/no-speculation diagnostic, not a serving mode.
@@ -187,7 +189,7 @@ if [ "$GPU_UTIL" != 0.94 ]; then
   echo 'This recipe requires GPU_UTIL=0.94; size the KV cache with KV_MEM instead' >&2; exit 2
 fi
 # The KV cache is a fixed byte budget per card, so the context length does not
-# change what the weights leave free. 10 GiB per card holds ~1.64 M tokens.
+# change what the weights leave free. 10 GiB per card holds ~1.62 M tokens.
 KV_MEM=${KV_MEM:-$MIMO_DEFAULT_KV_MEM}
 if [[ ! "$KV_MEM" =~ ^[1-9][0-9]*$ ]]; then echo 'KV_MEM must be a positive number of bytes' >&2; exit 2; fi
 # bf16 KV is the default; fp8_e4m3 halves KV bytes per token, but the DFlash
@@ -213,6 +215,7 @@ elif [ "$MODE" = mtp ]; then
   SPEC_JSON="{\"method\":\"mtp\",\"num_speculative_tokens\":$SPEC_N"
 fi
 MAX_SEQS=${MAX_SEQS:-$MIMO_DEFAULT_MAX_SEQS}
+if [[ ! "$MAX_SEQS" =~ ^[1-9][0-9]*$ ]]; then echo 'MAX_SEQS must be a positive number of sequences' >&2; exit 2; fi
 # KV offload (KV_OFFLOAD_GB, default 0: off): a tier of host RAM, in GiB, that keeps KV
 # blocks evicted from the cards and copies them back instead of re-prefilling (vLLM's
 # OffloadingConnector with TieringOffloadingSpec; a shared mmap in /dev/shm, so start.sh
@@ -222,7 +225,7 @@ MAX_SEQS=${MAX_SEQS:-$MIMO_DEFAULT_MAX_SEQS}
 # in the speculative config. docs/results.md has the numbers.
 KV_OFFLOAD_GB=${KV_OFFLOAD_GB:-0}
 KV_OFFLOAD_DIR=${KV_OFFLOAD_DIR:-}
-[[ "$KV_OFFLOAD_GB" =~ ^[0-9]+$ ]] || { echo 'KV_OFFLOAD_GB must be a whole number of GiB' >&2; exit 2; }
+[[ "$KV_OFFLOAD_GB" =~ ^(0|[1-9][0-9]*)$ ]] || { echo 'KV_OFFLOAD_GB must be a whole number of GiB' >&2; exit 2; }
 if [ -n "$KV_OFFLOAD_DIR" ] && [ "$KV_OFFLOAD_GB" = 0 ]; then
   echo 'KV_OFFLOAD_DIR needs a RAM tier in front of it: set KV_OFFLOAD_GB' >&2; exit 2
 fi

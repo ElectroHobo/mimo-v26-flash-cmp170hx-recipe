@@ -19,3 +19,6 @@ cache/
 bench/results/*
 !bench/results/.gitkeep
 !bench/results/release-*
+
+# Review tooling telemetry
+.review-telemetry/

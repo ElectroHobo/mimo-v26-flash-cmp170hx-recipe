@@ -25,7 +25,9 @@ same within spread at one (one-user prose ran 170–182 across today's boots
 at the same depth). A run of the same defaults earlier in the day, before
 the prefill chunk and fair prefill changed, gave 322.2 / 284.2 / 182.3,
 408.1 / 400.7 / 254.3, 513.6 / 535.6 / 396.2 and 756.6 / 754.7 / 546.5:
-neither setting touches decode. Raw runs: [`bench/results/release-0.2.0/`](../bench/results/release-0.2.0/).
+neither setting touches decode. That earlier run's file was overwritten by
+the final one (same tag) and is not kept; its figures survive only here and
+in the all-reduce table below. Raw runs: [`bench/results/release-0.2.0/`](../bench/results/release-0.2.0/).
 
 ### Draft depth by number of requests (the new default)
 
@@ -51,7 +53,9 @@ default re-measured the same day (aggregate tok/s, structured / code / prose):
 | 8 | 685.6 / 645.6 / 398.4 | **760.4 / 725.0 / 554.1** | 624.3 / 586.2 / 419.4 | 754.2 / 723.8 / 554.6 |
 
 Three drafts under load wins every column from four users up (+11 % / +12 %
-/ +39 % at eight) and is repeatable: a second boot gave 754 / 724 / 555. One
+/ +39 % at eight) and is repeatable: the release run, on another boot, gave
+754 / 738 / 556, and "7, then 3 from two" (the same depth at eight) 754 / 724 /
+555. One
 user is the same depth in every column, so that row shows the run-to-run
 spread. Four drafts under load is worse than both seven and three, on two
 boots; a guess is kernel padding (five tokens verified per request padded to
@@ -69,7 +73,8 @@ blocks back. `bench/kv_offload_bench.py`: a 100K-token prefix with three codes
 hidden in it, read cold, then warm (GPU prefix hit), then a flood of 18 ×
 100K tokens of unique filler (more than the 1.64 M-token pool, so the prefix
 is evicted; 22 preemptions in every run), then the prefix again. Time to first
-token, 2026-10-18, one run each on its own boot:
+token, 2026-10-18, one run each on its own boot, at the 1,024-token prefill
+chunk (the 0.1.0 default; the pool figures below are that chunk's):
 
 | | offload off | 64 GiB RAM tier | 16 GiB RAM + disk tier on a SATA SSD |
 |---|---:|---:|---:|
@@ -100,12 +105,13 @@ step with that answer, so the decoder waits for each prefill chunk.
 `bench/prefill_fairness.py`: one request streams a 1,500-token answer; three
 seconds in, a 30K-token prompt arrives. Decoder rate before, during and after
 the prompt is read; the longest pause between two streamed chunks; and how
-long the prompt took to read. Two runs each, 2026-10-18:
+long the prompt took to read. 2026-10-18, two runs each (one for the
+2,048-chunk column with 384-token slices), the first run shown:
 
 | | 1,024 chunk, no fair prefill | `FAIR_CHUNK=384` | `FAIR_CHUNK=384`, `MAX_BATCHED=2048` | `FAIR_CHUNK=128`, `MAX_BATCHED=2048` |
 |---|---:|---:|---:|---:|
 | decoder before / after, tok/s | 198 / 186 | 189 / 194 | 195 / 182 | 188 / 179 |
-| **decoder while the prompt is read** | **9.9** | **15.1** | **16.1** | **36.1** |
+| **decoder while the prompt is read** | **9.9** | **15.1** | **16.1** | **35.6** |
 | longest pause between chunks | 0.43 s | 0.20 s | 0.21 s | 0.10 s |
 | the 30K prompt's read | 11.6 s | 14.0 s | 14.3 s | 19.2 s |
 
@@ -136,7 +142,7 @@ pool because each sliding-window layer reserves in-flight tokens per request:
 `2stage`); unset, the kernel's own size heuristic chooses. Decode bench, same
 day as the 0.2.0 numbers above (aggregate tok/s, structured / code / prose):
 
-| users | unset (default) | `1stage` | `2stage` |
+| users | unset (default; the earlier defaults run above, file not kept) | `1stage` | `2stage` |
 |---|---:|---:|---:|
 | 1 | 322.2 / 284.2 / 182.3 | 310.5 / 292.3 / 172.9 | 319.3 / 279.8 / 168.7 |
 | 2 | 408.1 / 400.7 / 254.3 | 379.8 / 382.9 / 272.3 | 433.3 / 393.9 / 264.0 |

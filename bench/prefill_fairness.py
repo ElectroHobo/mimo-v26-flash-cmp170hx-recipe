@@ -8,9 +8,9 @@ before the prompt arrived, while it was being read, and after; and the
 longest pause between two streamed chunks. For the long prompt: its time to
 first token.
 
-Compare a run on the defaults with one on
-`EXTRA_ARGS='--prefill-chunk-with-decodes 384 --max-num-partial-prefills 2'`
-(fair prefill: while anyone is decoding, prefill goes in 384-token slices).
+Compare a run on the defaults (FAIR_CHUNK=384: while anyone is decoding,
+prefill goes in 384-token slices) with one on FAIR_CHUNK=0 (off) or
+FAIR_CHUNK=128.
 
 Usage:
     python3 bench/prefill_fairness.py TAG [--port 8000] [--model mimo-v2.6-flash]

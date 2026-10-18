@@ -20,7 +20,7 @@ prefix, so it is a GPU hit either way, not a second eviction test.
 The RAM tier must be larger than the flood, or the flood pushes the prefix out
 of host RAM too and row 4 is a recompute either way (unless a disk tier is
 behind it, which is the disk-tier test). The default flood is sized for the
-recipe's 1.64 M-token pool.
+recipe's 1.62 M-token pool.
 
 Correctness: the prefix hides one code per question at different depths, and
 each question asks for one back. A reloaded prefix with the wrong bytes in it

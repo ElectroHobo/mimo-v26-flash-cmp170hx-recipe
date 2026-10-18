@@ -28,6 +28,9 @@ proposed per step).
   code and structured output), so prose decodes at 170 tok/s for one user
   against 322 on structured output. The MTP head is not the answer: it is
   slower on every column measured (`docs/results.md`).
+- **KV offload was measured with DFlash only.** With offload on, the recipe
+  sets `disable_eagle_block_drop` for whichever drafter runs; the MTP head
+  with offload has not been booted or measured.
 - **fp8 KV is only available without DFlash.** The drafter runs on the Triton
   attention backend, which has no fp8 KV path on sm_80, so `KV_DTYPE=fp8_e4m3`
   needs `SPEC_MODE=mtp` or `none`.
