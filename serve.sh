@@ -24,8 +24,8 @@
 #   SERVED_MODEL_NAME  model id clients send (default below)
 # Cards: CUDA_VISIBLE_DEVICES selects exactly four distinct physical cards
 #   (nvidia-smi numbering; default below).
-# Env overrides: MAX_LEN, MAX_SEQS, MAX_BATCHED, KV_MEM, KV_DTYPE, SPEC_N,
-#   GRAPH_MODE, REASONING_PARSER, TOOL_PARSER, EXTRA_ARGS, P2P, BOOT_CHECK.
+# Env overrides: MAX_LEN, MAX_SEQS, MAX_BATCHED, KV_MEM, KV_DTYPE, SPEC_N, SPEC_SCHEDULE,
+#   EXPERT_PARALLEL, GRAPH_MODE, REASONING_PARSER, TOOL_PARSER, EXTRA_ARGS, P2P, BOOT_CHECK.
 #   GPU_UTIL must stay 0.94 (refused otherwise); the KV cache is sized by KV_MEM
 #   bytes per card, not by the context, so MAX_LEN can be lowered freely.
 #   FIRST_LIGHT=1 is the 32K/eager/no-speculation diagnostic, not a serving mode.
@@ -204,12 +204,32 @@ if [ "$MODE" = dflash ]; then
   fi
   SPEC_N=${SPEC_N:-$MIMO_DEFAULT_DFLASH_SPEC_N}
   if [[ ! "$SPEC_N" =~ ^[1-9][0-9]*$ ]] || [ "$SPEC_N" -gt 8 ]; then echo 'SPEC_N must be 1..8 for dflash (the drafter blocks are 8 wide)' >&2; exit 2; fi
-  SPEC=(--speculative-config "{\"method\":\"dflash\",\"model\":\"$DRAFT_DIR\",\"num_speculative_tokens\":$SPEC_N}")
+  SPEC_JSON="{\"method\":\"dflash\",\"model\":\"$DRAFT_DIR\",\"num_speculative_tokens\":$SPEC_N"
 elif [ "$MODE" = mtp ]; then
   SPEC_N=${SPEC_N:-$MIMO_DEFAULT_MTP_SPEC_N}
   if [[ ! "$SPEC_N" =~ ^[1-9][0-9]*$ ]]; then echo 'SPEC_N must be positive' >&2; exit 2; fi
-  SPEC=(--speculative-config "{\"method\":\"mtp\",\"num_speculative_tokens\":$SPEC_N}")
+  SPEC_JSON="{\"method\":\"mtp\",\"num_speculative_tokens\":$SPEC_N"
 fi
+if [ "$MODE" != none ]; then
+  # SPEC_SCHEDULE (empty: off): drafts by batch size, vLLM's num_speculative_tokens_per_batch_size,
+  # a JSON list of [first_batch,last_batch,drafts] ranges without spaces starting at batch 1,
+  # e.g. [[1,2,7],[3,32,4]] (drafts above SPEC_N are clamped to it).
+  SPEC_SCHEDULE=${SPEC_SCHEDULE:-}
+  if [ -n "$SPEC_SCHEDULE" ]; then
+    SCHEDULE_RANGE='\[[1-9][0-9]*,[1-9][0-9]*,[0-9]+\]'
+    if [[ ! "$SPEC_SCHEDULE" =~ ^\[$SCHEDULE_RANGE(,$SCHEDULE_RANGE)*\]$ ]]; then
+      echo 'SPEC_SCHEDULE must be [[first,last,drafts],...] without spaces' >&2; exit 2
+    fi
+    SPEC_JSON+=",\"num_speculative_tokens_per_batch_size\":$SPEC_SCHEDULE"
+  fi
+  SPEC=(--speculative-config "$SPEC_JSON}")
+fi
+# EXPERT_PARALLEL=1 keeps whole routed experts on each card instead of slicing every
+# expert four ways (vLLM --enable-expert-parallel). Off by default: see docs/results.md.
+EXPERT_PARALLEL=${EXPERT_PARALLEL:-0}
+case "$EXPERT_PARALLEL" in 0|1) ;; *) echo 'EXPERT_PARALLEL must be 0 or 1' >&2; exit 2;; esac
+EP_ARGS=()
+[ "$EXPERT_PARALLEL" = 1 ] && EP_ARGS=(--enable-expert-parallel)
 SERVED_MODEL_NAME=${SERVED_MODEL_NAME:-$MIMO_DEFAULT_SERVED_MODEL_NAME}
 PORT=${PORT:-$MIMO_DEFAULT_PORT}
 # The key goes to vLLM through the environment rather than --api-key, so it
@@ -221,7 +241,7 @@ if [ -n "${API_KEY:-}" ]; then export VLLM_API_KEY="$API_KEY"; fi
 CMD=("$VENV/bin/vllm" serve "$MODEL"
   --served-model-name "$SERVED_MODEL_NAME"
   --host "${HOST:-127.0.0.1}"
-  --tensor-parallel-size "$TP" --pipeline-parallel-size "$PP"
+  --tensor-parallel-size "$TP" --pipeline-parallel-size "$PP" ${EP_ARGS[@]+"${EP_ARGS[@]}"}
   --hf-overrides "$MIMO_DEFAULT_HF_OVERRIDES" --trust-remote-code
   --kv-cache-dtype "$KV_DTYPE" --block-size "$MIMO_DEFAULT_BLOCK_SIZE"
   --max-model-len "$MAX_LEN" --gpu-memory-utilization "$GPU_UTIL" --kv-cache-memory "$KV_MEM"
@@ -287,7 +307,7 @@ for argument in ${EXTRA[@]+"${EXTRA[@]}"}; do
   fi
 done
 CMD+=(${EXTRA[@]+"${EXTRA[@]}"})
-echo "serve.sh: MiMo-V2.6-Flash-RL NVFP4 TP=$TP PP=$PP GPUs=$CUDA_VISIBLE_DEVICES KV=$KV_DTYPE KV_MEM=$KV_MEM ctx=$MAX_LEN speculation=$MODE${SPEC_N:+ k=$SPEC_N} FIRST_LIGHT=$FIRST_LIGHT"
+echo "serve.sh: MiMo-V2.6-Flash-RL NVFP4 TP=$TP PP=$PP GPUs=$CUDA_VISIBLE_DEVICES KV=$KV_DTYPE KV_MEM=$KV_MEM ctx=$MAX_LEN speculation=$MODE${SPEC_N:+ k=$SPEC_N}${SPEC_SCHEDULE:+ schedule=$SPEC_SCHEDULE} EP=$EXPERT_PARALLEL FIRST_LIGHT=$FIRST_LIGHT"
 echo "serve.sh: CUDA graph mode=$GRAPH_MODE (GRAPH_MODE=$GRAPH_MODE)"
 BOOT_CHECK=${BOOT_CHECK:-1}
 case "$BOOT_CHECK" in 0|1) ;; *) echo "[boot-check] FAIL: BOOT_CHECK must be 0 or 1" >&2; exit 2 ;; esac
