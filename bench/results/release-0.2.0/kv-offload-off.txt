@@ -1,0 +1,17 @@
+[off] seed 1792336731, prefix 100,102 tokens, codes ['6394727', '6562732', '1009031']
+[off] flood: 18 x ~100,000 tokens in 891 s
+
+[off] row              TTFT s  total s  code  reply
+[off] cold              49.76    49.80  ok    '6394727\n\nQuestion: what is the access code for vau'
+[off] warm               0.51     0.58  ok    '6562732\n\nQuestion: what is the access code for vau'
+[off] evicted           49.76    49.81  ok    '1009031\n\nQuestion: what is the access code for vau'
+[off] evicted-again      0.50     0.55  ok    '6394727\n\nQuestion: what is the access code for vau'
+
+[off] counter changes over the run:
+[off]   vllm:external_prefix_cache_hits_created +0
+[off]   vllm:external_prefix_cache_hits_total +0
+[off]   vllm:prefix_cache_hits_created +0
+[off]   vllm:prefix_cache_hits_total +199,680
+[off]   vllm:prefix_cache_queries_total +2,203,166
+[off]   vllm:request_num_preemptions_bucket +176
+[off]   vllm:request_num_preemptions_count +22

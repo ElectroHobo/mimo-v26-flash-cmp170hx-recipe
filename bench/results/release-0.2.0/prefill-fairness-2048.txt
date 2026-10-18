@@ -1,0 +1,3 @@
+[fair2048] long prompt 30,328 tokens, sent 3 s in, read in 14.31 s; decoder 1500 tokens in 21.1 s
+[fair2048] decoder tok/s  before  194.6   during prefill   16.1   after  181.7
+[fair2048] longest pause between chunks 0.21 s, 17.1 s into the run (during the prefill)
