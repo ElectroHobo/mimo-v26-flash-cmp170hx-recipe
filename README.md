@@ -1,7 +1,7 @@
 # MiMo-V2.6-Flash-RL on 4× CMP 170HX
 
 [![engine](https://img.shields.io/badge/engine-vllm--cmp170hx%2018305948ac-blue)](https://github.com/Morrowmake/vllm-cmp170hx/tree/18305948acba3f4c4d912cdd56f2202d2ebd94e8)
-![release](https://img.shields.io/badge/release-0.2.0-2ea44f)
+![release](https://img.shields.io/badge/release-0.2.1-2ea44f)
 
 **XiaomiMiMo's MiMo-V2.6-Flash-RL (309B MoE, 15B active, text / image / video /
 audio input) on four CMP 170HX cards with the full 1,048,576-token context:

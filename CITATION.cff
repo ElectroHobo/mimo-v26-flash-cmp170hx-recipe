@@ -4,8 +4,8 @@ title: "MiMo-V2.6-Flash-RL on 4x CMP 170HX: a community recipe for Morrowmake's 
 type: software
 authors:
   - name: ElectroHobo
-version: 0.2.0
-date-released: 2026-10-18
+version: 0.2.1
+date-released: 2026-10-28
 license: MIT
 repository-code: "https://github.com/ElectroHobo/mimo-v26-flash-cmp170hx-recipe"
 references:

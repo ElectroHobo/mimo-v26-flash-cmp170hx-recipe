@@ -1,0 +1,13 @@
+start-time-ab.txt is the log of one run that timed every recipe on the test host (5x CMP 170HX,
+2x E5-2697A v4, 352 GB RAM at 1600 MT/s, checkpoints on an NVMe stripe), 2026-10-28.
+Per recipe: before = as released; fill = with PYTHONPYCACHEPREFIX, first start (cache empty);
+after = the same, cache filled. Time = start command -> /health answers. Every start was
+preceded by reading the model's files into the page cache (gpubox-prewarm --wait), so the
+disk read is the same in all three.
+
+"MiMo V2.6 (Morrowmake, dev copy)" is this recipe: the 0.2.0 checkout on that host, which
+differs from v0.2.0 only by this change. The log's label is wrong; it is not Morrowmake's.
+
+The DeepSeek line is not the bytecode cache: that recipe's serve.sh sets
+PYTHONDONTWRITEBYTECODE=1 again inside the container, so its cache never filled, and its
+checkpoint does not fit in RAM, so its starts differ by how much was read from disk.

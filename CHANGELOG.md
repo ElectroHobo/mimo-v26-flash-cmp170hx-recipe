@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.1 — 2026-10-28
+
+Starts faster: compiled Python is kept in `cache/pycache`. The engine image
+ships no compiled Python, and the server ran with `PYTHONDONTWRITEBYTECODE=1`,
+so every one of its processes (the API server, the engine core, one per card)
+compiled vLLM and torch from source at every start: importing them took
+22–23 s that way and 11–12 s from the cache. `PYTHONPYCACHEPREFIX=/cache/pycache`
+(`start.sh`, `docker/container.env`) instead; nothing is written into the
+engine's own folders, and the first start fills the cache (~165 MB). Nothing
+else changes.
+
+Start to `/health`, the checkpoint read into the page cache before each start,
+2026-10-28: 410 s before, 324 s for the first start (filling the cache), 302 s
+after. The startup check passed (`bench/results/release-0.2.1/start-time-ab.txt`).
+
 ## 0.2.0 — 2026-10-18
 
 - Draft depth follows the number of requests: 7 drafts for one, 5 for two, 3
